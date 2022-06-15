@@ -7,9 +7,7 @@ import torch.utils.checkpoint as checkpoint
 import torch.nn.functional as F
 from torch import nn, Tensor
 import torch.fx
-import sys
-sys.path.append("/gpfs/scratch/chgwang/Papers")
-# from private_modules.Torch import tools
+
 
 class Permute(nn.Module):
     """This module returns a view of the tensor input with its dimensions permuted.
@@ -210,6 +208,7 @@ class ShiftedWindowAttention(nn.Module):
         self.attention_dropout = attention_dropout
         self.dropout = dropout
         
+        # shared Weights
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.proj = nn.Linear(dim, dim, bias=proj_bias)
         
