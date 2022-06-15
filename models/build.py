@@ -16,6 +16,7 @@ def build_model(config):
             attention_dropout=config.MODEL.SWIN1d_CLASS.ATTENTION_DROPOUT,
             stochastic_depth_prob=config.MODEL.SWIN1d_CLASS.STOCHASTIC_DEPTH_PROB,
             num_classes=config.MODEL.SWIN1d_CLASS.NUM_CLASS,
+            use_checkpoint=config.MODEL.SWIN1d_CLASS.USE_CHECKPOINT,
         )
     elif model_type == "swin1d_seq":
         model = Swin1dClass(
@@ -28,6 +29,7 @@ def build_model(config):
             dropout=config.MODEL.SWIN1d_SEQ.DROPOUT,
             attention_dropout=config.MODEL.SWIN1d_SEQ.ATTENTION_DROPOUT,
             stochastic_depth_prob=config.MODEL.SWIN1d_SEQ.STOCHASTIC_DEPTH_PROB,
+            use_checkpoint=config.MODEL.SWIN1d_SEQ.USE_CHECKPOINT,
         )        
     else:
         raise NotImplementedError(f"Unkown model: {model_type}")

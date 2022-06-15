@@ -3,6 +3,7 @@ from typing import Optional, Callable, List, Any
 import torch
 import torchvision.ops
 from torch import nn
+import torch.utils.checkpoint as checkpoint
 import torch.nn.functional as F
 from torch import nn, Tensor
 import torch.fx
@@ -312,7 +313,8 @@ class Swin1dClass(nn.Module):
         stochastic_depth_prob: float = 0.0,
         num_classes: int = 1000,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
-        block: Optional[Callable[..., nn.Module]] = None, 
+        block: Optional[Callable[..., nn.Module]] = None,
+        use_checkpoint: bool = False,
     ) -> None:
         super().__init__()
         if block is None:
@@ -320,7 +322,7 @@ class Swin1dClass(nn.Module):
         
         if norm_layer is None:
             norm_layer = nn.LayerNorm
-        
+        self.use_checkpoint = use_checkpoint
         layers: List[nn.Module] = []
         # split sequence to non-overlapping patches
         layers.append(
@@ -362,8 +364,7 @@ class Swin1dClass(nn.Module):
             # add patch merging layer
             if i_stage < (len(depths) - 1):
                 layers.append(PatchMerging(dim, norm_layer))
-        self.features = nn.Sequential(*layers)      
-
+        self.features = layers
         num_features = embed_dim * 2 ** (len(depths) - 1)
         self.norm = norm_layer(num_features)
         self.avgpool = nn.AdaptiveAvgPool1d(1)
@@ -375,7 +376,11 @@ class Swin1dClass(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def forward(self, x):
-        x = self.features(x)
+        for layer in self.features:
+            if self.use_checkpoint:
+                x = checkpoint.checkpoint(layer, x)
+            else:
+                x = layer(x)
         x = self.norm(x)
         x = x.permute(2,0,1)
         x = self.avgpool(x)
@@ -400,6 +405,7 @@ class Swin1dSeq(nn.Module):
         stochastic_depth_prob: float = 0.0,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         block: Optional[Callable[..., nn.Module]] = None, 
+        use_checkpoint: bool = False,
     ) -> None:
         super().__init__()
         if block is None:
@@ -407,6 +413,8 @@ class Swin1dSeq(nn.Module):
         
         if norm_layer is None:
             norm_layer = nn.LayerNorm
+
+        self.use_checkpoint = use_checkpoint
         
         layers: List[nn.Module] = []
         # split sequence to non-overlapping patches
@@ -440,7 +448,7 @@ class Swin1dSeq(nn.Module):
             # # add patch merging layer
             if i_stage < (len(depths) - 1):
                 layers.append(ChannelChange(dim, dim * 2))
-        self.features = nn.Sequential(*layers)      
+        self.features = layers    
         num_channels = embed_dim * 2 ** (len(depths) - 1)
         self.norm = norm_layer(num_channels)
         
@@ -451,7 +459,11 @@ class Swin1dSeq(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def forward(self, x):
-        x = self.features(x)
+        for layer in self.features:
+            if self.use_checkpoint:
+                x = checkpoint.checkpoint(layer, x)
+            else:
+                x = layer(x)
         x = self.norm(x)
         return x        
 
@@ -489,7 +501,8 @@ if __name__ == "__main__":
         depths,
         num_heads,
         window_size,
-        stochastic_depth_prob=0.2
+        stochastic_depth_prob=0.2,
+        use_checkpoint=False,
     )
     input_x = torch.zeros(4, 1000, 30)
     y = model(input_x)
@@ -507,7 +520,7 @@ if __name__ == "__main__":
         depths,
         num_heads,
         window_size,
-        stochastic_depth_prob=0.2
+        stochastic_depth_prob=0.2,
     )
     input_x = torch.zeros(4, int(1e5), 30)
     y = model(input_x)
