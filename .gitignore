@@ -1,3 +1,5 @@
+# ignore
+demos/
 # ignore [m,g,a]files
 [a,m,g][0-9][0-9][0-9][0-9][0-9]*.[0-9]*
 # ignore temp archived files
