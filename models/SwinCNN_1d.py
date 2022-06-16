@@ -1,3 +1,10 @@
+# --------------------------------------------------------
+# 1D Swin Transformer for sequence training
+# Copyright (c) 2022 Chenguang Wan
+# Licensed under The Apache License [see LICENSE for details]
+# Written by Chenguang Wan
+# --------------------------------------------------------
+
 from typing import Optional, Callable, List, Any
 
 import torch
@@ -84,7 +91,7 @@ class ChannelChange(torch.nn.Sequential):
         embed_dim,
         norm_layer: Optional[Callable[..., nn.Module]] = None
     ) -> None:
-        layers: List[nn.Module] = []
+        layers: List[nn.Module] = nn.ModuleList()
         if norm_layer is None:
             norm_layer = nn.LayerNorm
         layers = nn.Sequential(
@@ -395,6 +402,7 @@ class Swin1dSeq(nn.Module):
         self,
         input_dim: int,
         embed_dim: int,
+        output_dim: int,
         depths: List[int],
         num_heads: List[int],
         window_size: List[int],
@@ -415,7 +423,7 @@ class Swin1dSeq(nn.Module):
 
         self.use_checkpoint = use_checkpoint
         
-        layers: List[nn.Module] = []
+        layers: List[nn.Module] = nn.ModuleList()
         # split sequence to non-overlapping patches
         layers.append(
             ChannelChange(input_dim, embed_dim)
@@ -424,7 +432,7 @@ class Swin1dSeq(nn.Module):
         stage_block_id = 0
         # build SwinTransformer blocks
         for i_stage in range(len(depths)):
-            stage: List[nn.Module] = []
+            stage = nn.ModuleList()
             dim = embed_dim * 2 ** i_stage
             for i_layer in range(depths[i_stage]):
                 # adjust stochastic depth probability based on the depth of the stage block
@@ -450,7 +458,7 @@ class Swin1dSeq(nn.Module):
         self.features = layers    
         num_channels = embed_dim * 2 ** (len(depths) - 1)
         self.norm = norm_layer(num_channels)
-        
+        self.dense = nn.Linear(num_channels, output_dim)
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.trunc_normal_(m.weight, std=0.02)
@@ -464,6 +472,7 @@ class Swin1dSeq(nn.Module):
             else:
                 x = layer(x)
         x = self.norm(x)
+        x = self.dense(x)
         return x        
 
 
@@ -509,6 +518,7 @@ if __name__ == "__main__":
 
     input_dim = 30
     embed_dim = 48
+    output_dim = 128
     depths = [2, 2, 6, 2]
     num_heads = [3, 6, 12, 24]
     window_size = 8
@@ -516,11 +526,14 @@ if __name__ == "__main__":
     model = Swin1dSeq(
         input_dim,
         embed_dim,
+        output_dim,
         depths,
         num_heads,
         window_size,
         stochastic_depth_prob=0.2,
     )
-    input_x = torch.zeros(4, int(1e5), 30)
+    input_x = torch.zeros(1, int(1e5), 30)
+    input_x = input_x.cuda()
+    model.cuda()
     y = model(input_x)
     print(f"swin1d_seq output shape: {y.shape}")
