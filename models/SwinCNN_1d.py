@@ -1,9 +1,9 @@
-# --------------------------------------------------------
+# -----------------------------------------------------------
 # 1D Swin Transformer for sequence training
 # Copyright (c) 2022 Chenguang Wan
 # Licensed under The Apache License [see LICENSE for details]
 # Written by Chenguang Wan
-# --------------------------------------------------------
+# -----------------------------------------------------------
 
 from typing import Optional, Callable, List, Any
 
