@@ -454,6 +454,7 @@ class Swin1dSeq(nn.Module):
             layers.append(nn.Sequential(*stage))
             # # add patch merging layer
             if i_stage < (len(depths) - 1):
+                # after ChanelChange layer the output_dim (Channel) will be dim * 2.
                 layers.append(ChannelChange(dim, dim * 2))
         self.features = layers    
         num_channels = embed_dim * 2 ** (len(depths) - 1)
