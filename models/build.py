@@ -19,7 +19,7 @@ def build_model(config):
             use_checkpoint=config.MODEL.SWIN1d_CLASS.USE_CHECKPOINT,
         )
     elif model_type == "swin1d_seq":
-        model = Swin1dClass(
+        model = Swin1dSeq(
             input_dim=config.MODEL.SWIN1d_SEQ.IN_CHANS,
             embed_dim=config.MODEL.EMBED_DIM,
             depths=config.MODEL.SWIN1d_SEQ.DEPTHS,
