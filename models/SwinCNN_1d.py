@@ -30,7 +30,7 @@ class Permute(nn.Module):
         return torch.permute(x, self.dims)
         
 class MLP(nn.Module):
-    """The MLP for SwinTrans 1d block. Details can be found at http://arxiv.org/abs/2103.14030 
+    """The MLP for SwinTrans 1d block. Details can be found at https://arxiv.org/abs/2207.05695
     """
     def __init__(self, in_features, hidden_features=None, out_features=None, activation_layer=nn.GELU, dropout=0.):
         super().__init__()
@@ -476,6 +476,62 @@ class Swin1dSeq(nn.Module):
         x = self.dense(x)
         return x        
 
+# multiple layers 1D Swin sequence
+class Swin1dSeqMultipleLayer(nn.Module):
+    """  A multiple layer implenmentation of Swin1dSeq
+    """
+    def __init__(
+        self,
+        input_dim: int,
+        embed_dim: int,
+        output_dim: int,
+        depths: List[int],
+        num_heads: List[int],
+        window_size: List[int],
+        num_layers = 1,
+        mlp_ratio: float = 4.0,
+        dropout: float = 0.0,
+        attention_dropout: float = 0.0,
+        stochastic_depth_prob: float = 0.0,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        block: Optional[Callable[..., nn.Module]] = None, 
+        use_checkpoint: bool = False,
+    ) -> None:
+        super().__init__()
+        self.models = nn.ModuleList()
+        for _ in range(num_layers-1):
+            self.models.append(
+                Swin1dSeq(input_dim, 
+                          embed_dim, 
+                          input_dim, 
+                          depths, 
+                          num_heads, 
+                          window_size,
+                          mlp_ratio,
+                          dropout,
+                          attention_dropout,
+                          stochastic_depth_prob,
+                          norm_layer,
+                          block,
+                          use_checkpoint))
+            
+        self.models.append(Swin1dSeq(input_dim, 
+                                embed_dim, 
+                                output_dim, 
+                                depths, 
+                                num_heads, 
+                                window_size,
+                                mlp_ratio,
+                                dropout,
+                                attention_dropout,
+                                stochastic_depth_prob,
+                                norm_layer,
+                                block,
+                                use_checkpoint))
+    def forward(self, x):
+        for model in self.models:
+            x = model(x)
+        return x
 
 
 if __name__ == "__main__":
@@ -538,3 +594,17 @@ if __name__ == "__main__":
     model.cuda()
     y = model(input_x)
     print(f"swin1d_seq output shape: {y.shape}")
+
+    # multiple layer swin1d_seq
+    num_layers = 2
+    model = Swin1dSeqMultipleLayer(input_dim,
+                                   embed_dim,
+                                   output_dim,
+                                   depths,
+                                   num_heads,
+                                   window_size,
+                                   num_layers,
+                                   stochastic_depth_prob=0.2)
+    model.cuda()
+    y = model(input_x)
+    print(f"multiple layer implenmentation of swin1d_seq output shape: {y.shape}")
