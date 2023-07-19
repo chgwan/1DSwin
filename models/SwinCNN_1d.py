@@ -232,7 +232,7 @@ class ShiftedWindowAttention(nn.Module):
         # 2d requires sum or some other actions. But 1d donot need it.
         # [window_size*window_size]
         relative_position_index = relative_coords.view(-1)
-        self.register_buffer("relative_position_index", relative_coords)
+        self.register_buffer("relative_position_index", relative_position_index)
         # an init method.
         nn.init.trunc_normal_(self.relative_position_bias_table, std=0.02)
         
