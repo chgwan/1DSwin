@@ -143,8 +143,9 @@ def shifted_window_attention_1d(
     x = x.view(B, pad_L // window_size, window_size, C).reshape(B*num_windows, window_size, C)
     
     # multi-head attention
+    # qkv: [B*num_windows, window_size, C * 3]
     qkv = F.linear(x, qkv_weight, qkv_bias)
-    # 3，x.size(0), num_heads, x.size(1), C // num_heads
+    # 3，x.size(0)|[B*num_windows], num_heads, x.size(1)|[window_size], C // num_heads
     # 3 means q k v 
     # number head should factor of C.
     # X size: [B, pad_L, C]
